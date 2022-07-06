@@ -13,5 +13,8 @@
         </config-file>
         <header-file src="src/ios/CDVInputBar.h" />
         <source-file src="src/ios/CDVInputBar.m" />
+        <pods use-frameworks="true">
+            <pod name="Mp3Recorder" git="git@github.com:boboxiaodd/Mp3Recorder.git" />
+        </pods>
     </platform>
 </plugin>
