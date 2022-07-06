@@ -1,0 +1,14 @@
+{
+    "name": "inputbar",
+    "version": "0.0.1",
+    "description": "cordova inputbar",
+    "cordova": {
+        "id": "inputbar",
+        "platforms": [
+            "ios"
+        ]
+    },
+    "keywords": [],
+    "author": "bobo",
+    "license": "MIT"
+}

@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="cordova-plugin-inputbar" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0">
+    <name>CDVLocalWWW</name>
+    <js-module name="CDVInputBar" src="www/inputbar.js">
+        <clobbers target="CDVInputBar" />
+    </js-module>
+    <platform name="ios">
+        <config-file parent="/*" target="config.xml">
+            <feature name="CDVInputBar">
+                <param name="ios-package" value="CDVInputBar" />
+                <param name="onload" value="true" />
+            </feature>
+        </config-file>
+        <header-file src="src/ios/CDVInputBar.h" />
+        <source-file src="src/ios/CDVInputBar.m" />
+    </platform>
+</plugin>
