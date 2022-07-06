@@ -6,6 +6,7 @@
 #import "UIColor+BBVoiceRecord.h"
 #import "BBHoldToSpeakButton.h"
 #import <AudioToolbox/AudioToolbox.h>
+#import <AlignButton/AlignButton.h>
 #define kFakeTimerDuration       0.2
 #define kMaxRecordDuration       60     //最长录音时长
 #define kRemainCountingDuration  10     //剩余多少秒开始倒计时
@@ -152,7 +153,33 @@
     [res setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult: res callbackId:_chat_cdvcommand.callbackId];
 }
+- (void)pageControlAction{
+    CGFloat index = self.pageControl.currentPage;
+    CGPoint point = CGPointMake(index*[UIScreen mainScreen].bounds.size.width, 0);
+    [self.scrollView setContentOffset:point animated:YES];
 
+}
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+    CGFloat x = scrollView.contentOffset.x;
+    CGFloat width = [UIScreen mainScreen].bounds.size.width;
+    self.pageControl.currentPage = x/width;
+}
+
+-(void)moreButtonItemTap:(UIButton *)sender
+{
+    [self touchfeedback];
+    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+    NSString *type;
+    if(!sender.titleLabel.text){
+        type = @"";
+    }else{
+        type = sender.titleLabel.text;
+    }
+    [message setObject: type  forKey:@"type"];
+    CDVPluginResult* res = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+    [res setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult: res callbackId:_chat_cdvcommand.callbackId];
+}
 
 - (void)createChatBar:(CDVInvokedUrlCommand *)command
 {
@@ -335,11 +362,49 @@
 
 - (void)onKeyboardWillHide:(NSNotification *)sender
 {
-
+    if (_chatBar){
+        _KeyboardHeight = 0;
+        if(!_isExtBarOpen){
+            [self resetChatBar];
+        }
+    }
+//    if (_inputbar){
+//        CGRect r = [_inputbar frame];
+//        r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight;
+//        r.size.height = _inputBarHeight;
+//        [_inputbar setFrame:r];
+//        [_backdropView removeFromSuperview];
+//        [_inputTextField removeFromSuperview];
+//        [_inputbar removeFromSuperview];
+//        _inputbar = nil;
+//        _cdvcommand = nil;
+//    }
 }
 
 - (void)onKeyboardWillShow:(NSNotification *)note
 {
+    CGRect rect = [[note.userInfo valueForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    CGFloat safeBottom =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+    double height = rect.size.height;
+//    if (_inputbar){
+//        CGRect r = [_inputbar frame];
+//        r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight - height + safeBottom;
+//        r.size.height = _inputBarHeight - safeBottom;
+//        [_inputbar setFrame:r];
+//    }
+    if (_chatBar){
+        _KeyboardHeight = height;
+        if(_isExtBarOpen){
+            _isExtBarOpen = NO;
+            [_emojiView setHidden:YES];
+            [_moreView setHidden:YES];
+        }
+        CGRect r = [_chatBar frame];
+        r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight - height + safeBottom;
+        r.size.height = _inputBarHeight;
+        [_chatBar setFrame:r];
+        [self send_event:_chat_cdvcommand withMessage:@{@"type":@"resize",@"height": @(_inputBarHeight + _KeyboardHeight - safeBottom)} Alive:YES State:YES];
+    }
 
 }
 
