@@ -18,7 +18,7 @@
                 <source url="https://github.com/CocoaPods/Specs.git"/>
             </config>
             <pods use-frameworks="true">
-                <pod name="Mp3Recorder" git="git@github.com:boboxiaodd/Mp3Recorder.git" />
+                <pod name="Mp3Recorder" options="https://github.com/boboxiaodd/Mp3Recorder.git" />
             </pods>
         </podspec>
 
