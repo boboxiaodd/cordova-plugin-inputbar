@@ -13,6 +13,14 @@
         </config-file>
         <header-file src="src/ios/CDVInputBar.h" />
         <source-file src="src/ios/CDVInputBar.m" />
+        <resource-file src="src/ios/res/ic_record@2x.png" />
+        <resource-file src="src/ios/res/ic_record@3x.png" />
+        <resource-file src="src/ios/res/ic_record_ripple@2x.png" />
+        <resource-file src="src/ios/res/ic_record_ripple@3x.png" />
+        <resource-file src="src/ios/res/ic_record_too_short@2x.png" />
+        <resource-file src="src/ios/res/ic_record_too_short@3x.png" />
+        <resource-file src="src/ios/res/ic_record_to_cancel@2x.png" />
+        <resource-file src="src/ios/res/ic_record_to_cancel@3x.png" />
         <podspec>
             <config>
                 <source url="https://github.com/CocoaPods/Specs.git"/>
