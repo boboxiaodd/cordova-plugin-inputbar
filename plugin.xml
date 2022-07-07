@@ -19,8 +19,8 @@
         <resource-file src="src/ios/res/ic_record_ripple@3x.png" />
         <resource-file src="src/ios/res/ic_record_too_short@2x.png" />
         <resource-file src="src/ios/res/ic_record_too_short@3x.png" />
-        <resource-file src="src/ios/res/ic_record_to_cancel@2x.png" />
-        <resource-file src="src/ios/res/ic_record_to_cancel@3x.png" />
+        <resource-file src="src/ios/res/ic_release_to_cancel@2x.png" />
+        <resource-file src="src/ios/res/ic_release_to_cancel@3x.png" />
         <podspec>
             <config>
                 <source url="https://github.com/CocoaPods/Specs.git"/>
