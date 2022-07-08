@@ -6,7 +6,6 @@
 #import "UIColor+BBVoiceRecord.h"
 #import "BBHoldToSpeakButton.h"
 #import <AudioToolbox/AudioToolbox.h>
-#import <AlignButton/AlignButton.h>
 #import <SDWebImage/SDWebImage.h>
 #define kFakeTimerDuration       0.2
 #define kMaxRecordDuration       60     //最长录音时长
