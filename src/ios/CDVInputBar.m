@@ -7,18 +7,14 @@
 #import "BBHoldToSpeakButton.h"
 #import <AudioToolbox/AudioToolbox.h>
 #import <AlignButton/AlignButton.h>
+#import <SDWebImage/SDWebImage.h>
 #define kFakeTimerDuration       0.2
 #define kMaxRecordDuration       60     //最长录音时长
 #define kRemainCountingDuration  10     //剩余多少秒开始倒计时
 
-#define kInputBarHeight 36.0
-#define kInputBarPadding 10.0
-#define kInputBarTitleHeight 26.0
-
-#define kChatBarHeight 48.0
-
-#define kChatBarHeightDark 90.0
-
+//#define kInputBarHeight 36.0
+//#define kInputBarPadding 10.0
+//#define kChatBarHeight 48.0
 
 @interface CDVInputBar () <UITextFieldDelegate,UIScrollViewDelegate,UIGestureRecognizerDelegate,MXMp3RecorderDelegate>
 
@@ -39,6 +35,8 @@
 @property (nonatomic, strong) UIButton* voiceButton;
 @property (nonatomic, strong) UITextField* textField;
 @property (nonatomic,readwrite) CGFloat inputBarHeight;     //关闭输入法时候 输入框高度
+@property (nonatomic,readwrite) CGFloat kChatBarHeight;
+@property (nonatomic,readwrite) CGFloat kInputBarPadding;
 @property (nonatomic, readwrite) CGFloat chatExtbarHeight;  //聊天框扩展高度
 @property (nonatomic, readwrite) NSArray* emoji_list;
 @property (nonatomic,strong) UIButton * keyboardButton;
@@ -47,10 +45,17 @@
 @property (nonatomic, assign) BOOL isExtBarOpen;
 @property (nonatomic,strong) UIView * emojiView;
 @property (nonatomic,strong) UIView * moreView;
-
+@property (nonatomic,assign) BOOL needfeedback; //是否需要点击反馈
 @property (nonatomic, retain) UIScrollView *scrollView;
 @property (nonatomic, retain) UIPageControl *pageControl;
+@property (nonatomic, readwrite) NSString * filepath;
 
+
+@property (nonatomic,strong) UIView * inputBar;
+@property (nonatomic,strong) CDVInvokedUrlCommand * input_command;
+@property (nonatomic,strong) UIView * backdropView;
+@property (nonatomic,strong) UITextField * inputTextField;
+@property (nonatomic,readwrite) int inputBarRealHeight;
 @end
 
 @implementation CDVInputBar
@@ -62,8 +67,14 @@
     [nc addObserver:self selector:@selector(onKeyboardDidHide:) name:UIKeyboardDidHideNotification object:nil];
     [nc addObserver:self selector:@selector(onKeyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [nc addObserver:self selector:@selector(onKeyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSArray *directoryPaths = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
+    NSURL *distPath = [[directoryPaths firstObject] URLByAppendingPathComponent:@"NoCloud/www/www"];
+    _filepath = [distPath path];
 
 }
+
+
 
 - (void)voiceButtonTap:(UIButton *)sender
 {
@@ -80,6 +91,7 @@
 }
 -(void)resetChatBar
 {
+    if(!_chatBar) return;
     CGRect r = [_chatBar frame];
     r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight;
     r.size.height = _inputBarHeight;
@@ -104,8 +116,9 @@
 - (void)emojiButtonTap:(UIButton *)sender
 {
     [self touchfeedback];
+    [_pageControl setHidden:NO];
     [UIView animateWithDuration: 0.3 animations: ^(void){
-        [self openExtBar:NO];
+        [self openExtBar];
         [self.textField resignFirstResponder];
         [self.emojiView setHidden:NO];
         [self.moreView setHidden:YES];
@@ -114,8 +127,9 @@
 - (void)moreButtonTap:(UIButton *)sender
 {
     [self touchfeedback];
+    [_pageControl setHidden:YES];
     [UIView animateWithDuration: 0.3 animations: ^(void){
-        [self openExtBar:YES];
+        [self openExtBar];
         [self.textField resignFirstResponder];
         [self.moreView setHidden:NO];
         [self.emojiView setHidden:YES];
@@ -123,42 +137,28 @@
 }
 
 
--(void)openExtBar:(BOOL)type
+-(void)openExtBar
 {
     [_voiceButton setHidden:NO];
     [_keyboardButton setHidden:YES];
     [_voiceRecorderButton setHidden:YES];
     [_textField setHidden:NO];
     CGRect r = [_chatBar frame];
-    CGFloat realExtHeight = _chatExtbarHeight;
-    if(type){
-        realExtHeight = _chatExtbarHeight / 2;
-    }
-    r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight - realExtHeight;
-    r.size.height = _inputBarHeight + realExtHeight;
+    r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight - _chatExtbarHeight;
+    r.size.height = _inputBarHeight + _chatExtbarHeight;
     [_chatBar setFrame:r];
     _isExtBarOpen = YES;
 
-    [self send_event:_chat_cdvcommand withMessage:@{@"type":@"resize",@"height":@(_inputBarHeight + realExtHeight)} Alive:YES State:YES];
+    [self send_event:_chat_cdvcommand withMessage:@{@"type":@"resize",@"height":@(_inputBarHeight + _chatExtbarHeight)} Alive:YES State:YES];
 }
 
 - (void)choseImage:(UITapGestureRecognizer *)sender {
 
     NSLog(@"emojiTap...");
     [self touchfeedback];
-    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-    [message setObject:@"emoji" forKey:@"type"];
-    [message setObject:@([sender.view tag]) forKey:@"emoji"];
-    CDVPluginResult* res = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-    [res setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult: res callbackId:_chat_cdvcommand.callbackId];
+    [self send_event:_chat_cdvcommand withMessage:@{@"type":@"emoji",@"index":@([sender.view tag])} Alive:YES State:YES];
 }
-- (void)pageControlAction{
-    CGFloat index = self.pageControl.currentPage;
-    CGPoint point = CGPointMake(index*[UIScreen mainScreen].bounds.size.width, 0);
-    [self.scrollView setContentOffset:point animated:YES];
 
-}
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     CGFloat x = scrollView.contentOffset.x;
     CGFloat width = [UIScreen mainScreen].bounds.size.width;
@@ -168,18 +168,23 @@
 -(void)moreButtonItemTap:(UIButton *)sender
 {
     [self touchfeedback];
-    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
-    NSString *type;
-    if(!sender.titleLabel.text){
-        type = @"";
-    }else{
-        type = sender.titleLabel.text;
-    }
-    [message setObject: type  forKey:@"type"];
-    CDVPluginResult* res = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-    [res setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult: res callbackId:_chat_cdvcommand.callbackId];
+    [self send_event:_chat_cdvcommand withMessage:@{@"type":@"more",@"index":@([sender tag])} Alive:YES State:YES];
 }
+
+-(void)closeInputBar
+{
+    if(_inputBar){
+        [_backdropView removeFromSuperview];
+        [_inputTextField removeFromSuperview];
+        [_inputBar removeFromSuperview];
+        _inputBar = nil;
+        _input_command = nil;
+    }
+}
+
+
+#pragma mark Cordova 接口
+
 
 - (void)createChatBar:(CDVInvokedUrlCommand *)command
 {
@@ -189,39 +194,52 @@
     if(!_chatBar){
         NSDictionary *options = [command.arguments objectAtIndex: 0];
 
-        _inputBarHeight = kChatBarHeight + safeBottom;
+        _kChatBarHeight = [[options objectForKey:@"height"] intValue];
+        _needfeedback = [[options valueForKey:@"feedback"] boolValue];
+        _inputBarHeight = _kChatBarHeight + safeBottom;
         _emoji_list = [options objectForKey:@"emoji"];
-        CGFloat emojiWidth = (screenWidth - 6 * kInputBarPadding)/5;
-        _chatExtbarHeight = emojiWidth * 4 + 5 * kInputBarPadding;
+        NSString * ic_voice = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_voice"]];
+        NSString * ic_keyboard = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_keyboard"]];
+        NSString * ic_emoji = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_emoji"]];
+        NSString * ic_more = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_more"]];
+        int input_radius = [[options objectForKey:@"radius"] intValue];
+        _kInputBarPadding = [[options objectForKey:@"padding"] intValue];
+        CGFloat emojiWidth = (screenWidth - 6 * _kInputBarPadding)/5;
+        _chatExtbarHeight = emojiWidth * 4 + 5 * _kInputBarPadding;
 
         _chatBar = [[UIView alloc] initWithFrame:CGRectMake(0.0, [UIScreen mainScreen].bounds.size.height , screenWidth, _inputBarHeight + 15 + _chatExtbarHeight)];
         _chatBar.backgroundColor = [self colorWithHex:0xFFFFFFFF];
         [self.viewController.view addSubview:_chatBar];
 
-        CGFloat buttonWidth = kChatBarHeight - 2 * kInputBarPadding;
-        _voiceButton = [[UIButton alloc] initWithFrame:CGRectMake(kInputBarPadding,kInputBarPadding,buttonWidth,buttonWidth)];
-        [_voiceButton setImage:[UIImage imageNamed:@"ic-voice"] forState:UIControlStateNormal];
+        CGFloat buttonWidth = _kChatBarHeight - 2 * _kInputBarPadding;
+        _voiceButton = [[UIButton alloc] initWithFrame:CGRectMake(_kInputBarPadding,_kInputBarPadding,buttonWidth,buttonWidth)];
+        UIImage * voice_img = [UIImage imageWithContentsOfFile:ic_voice];
+        [_voiceButton setImage: voice_img forState:UIControlStateNormal];
 
         [_voiceButton addTarget:self action:@selector(voiceButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_chatBar addSubview:_voiceButton];
         CGRect f;
         f = [_voiceButton frame];
         _keyboardButton = [[UIButton alloc] initWithFrame:f];
-        [_keyboardButton setBackgroundImage:[UIImage imageNamed:@"ic-keyboard"] forState:UIControlStateNormal];
+        [_keyboardButton setBackgroundImage:[UIImage imageWithContentsOfFile:ic_keyboard] forState:UIControlStateNormal];
 
         [_keyboardButton addTarget:self action:@selector(keyboardButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_keyboardButton setHidden:YES];
         [_chatBar addSubview:_keyboardButton];
 
-        CGFloat textFieldWidth = screenWidth - 3 * buttonWidth - 5 * kInputBarPadding;
-        _textField = [[UITextField alloc] initWithFrame:CGRectMake(f.origin.x + buttonWidth + kInputBarPadding, kInputBarPadding, textFieldWidth,buttonWidth)];
-        _textField.layer.cornerRadius = buttonWidth / 2;
+        CGFloat textFieldWidth = screenWidth - 3 * buttonWidth - 5 * _kInputBarPadding;
+        _textField = [[UITextField alloc] initWithFrame:CGRectMake(f.origin.x + buttonWidth + _kInputBarPadding, _kInputBarPadding, textFieldWidth,buttonWidth)];
+        if(input_radius){
+            _textField.layer.cornerRadius = input_radius;
+        }else{
+            _textField.layer.cornerRadius = buttonWidth / 2;
+        }
         _textField.font = [UIFont systemFontOfSize:16];
         _textField.textColor = [UIColor blackColor];
         _textField.backgroundColor = [UIColor colorWithHex:0xf3f3f3 alpha:1];
         _textField.delegate = self;
         _textField.placeholder = [options objectForKey:@"placeholder"] ?: @"请输入...";
-        UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 16.0, buttonWidth)];
+        UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding, buttonWidth)];
         _textField.leftView = paddingView;
         _textField.rightView = paddingView;
         _textField.leftViewMode = UITextFieldViewModeAlways;
@@ -231,43 +249,46 @@
 
         f = [_textField frame];
         _voiceRecorderButton = [[BBHoldToSpeakButton alloc] initWithFrame:f];
-        [_voiceRecorderButton setBackgroundImage:[UIImage bb_imageWithColor:[UIColor colorWithHex:0xeeeeee alpha:0.5] withSize:CGSizeMake(1, 1)] forState:UIControlStateNormal];
-        [_voiceRecorderButton setBackgroundImage:[UIImage bb_imageWithColor:[UIColor colorWithHex:0x666666 alpha:0.5] withSize:CGSizeMake(1, 1)] forState:UIControlStateHighlighted];
+        [_voiceRecorderButton setBackgroundImage:[UIImage bb_imageWithColor:[UIColor colorWithHex:0xeeeeee alpha:1] withSize:CGSizeMake(1, 1)] forState:UIControlStateNormal];
+        [_voiceRecorderButton setBackgroundImage:[UIImage bb_imageWithColor:[UIColor colorWithHex:0x555555 alpha:1] withSize:CGSizeMake(1, 1)] forState:UIControlStateHighlighted];
 
-        _voiceRecorderButton.layer.cornerRadius = buttonWidth / 2;
-        _voiceRecorderButton.layer.borderColor = [[UIColor blackColor] CGColor];
+        if(input_radius)
+            _voiceRecorderButton.layer.cornerRadius = input_radius;
+        else
+            _voiceRecorderButton.layer.cornerRadius = buttonWidth / 2;
+        _voiceRecorderButton.layer.borderColor = [[UIColor colorWithHex:0xeeeeee alpha:1] CGColor];
         _voiceRecorderButton.layer.borderWidth = 1.0f;
         _voiceRecorderButton.clipsToBounds = YES;
         _voiceRecorderButton.enabled = NO;
         _voiceRecorderButton.titleLabel.font = [UIFont systemFontOfSize:16.0];
         [_voiceRecorderButton setTitleColor: [UIColor blackColor] forState:UIControlStateNormal];
-        [_voiceRecorderButton setTitle:@"长按开始录音" forState:UIControlStateNormal];
+        [_voiceRecorderButton setTitle:@"按住说话" forState:UIControlStateNormal];
         [_voiceRecorderButton setHidden:YES];
         [_chatBar addSubview:_voiceRecorderButton];
 
 
-        _emojiButton = [[UIButton alloc] initWithFrame:CGRectMake(f.origin.x + textFieldWidth + kInputBarPadding ,kInputBarPadding, buttonWidth,buttonWidth)];
-        [_emojiButton setBackgroundImage:[UIImage imageNamed:@"ic-emoji"] forState:UIControlStateNormal];
+        _emojiButton = [[UIButton alloc] initWithFrame:CGRectMake(f.origin.x + textFieldWidth + _kInputBarPadding ,_kInputBarPadding, buttonWidth,buttonWidth)];
+        [_emojiButton setBackgroundImage:[UIImage imageWithContentsOfFile:ic_emoji] forState:UIControlStateNormal];
         [_emojiButton addTarget:self action:@selector(emojiButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_chatBar addSubview:_emojiButton];
 
         if([_emoji_list count] == 0){ //如果表情为空，隐藏表情按钮
             [_emojiButton setHidden:YES];
-            f.size.width += (buttonWidth + kInputBarPadding);
+            f.size.width += (buttonWidth + _kInputBarPadding);
             [_textField setFrame:f];
             [_voiceRecorderButton setFrame:f];
         }
 
         f = [_emojiButton frame];
-        _moreButton = [[UIButton alloc] initWithFrame:CGRectMake(f.origin.x + buttonWidth + kInputBarPadding ,kInputBarPadding, buttonWidth,buttonWidth)];
-        [_moreButton setBackgroundImage:[UIImage imageNamed:@"ic-more"] forState:UIControlStateNormal];
+        _moreButton = [[UIButton alloc] initWithFrame:CGRectMake(f.origin.x + buttonWidth + _kInputBarPadding ,_kInputBarPadding, buttonWidth,buttonWidth)];
+        [_moreButton setBackgroundImage:[UIImage imageWithContentsOfFile:ic_more] forState:UIControlStateNormal];
         [_moreButton addTarget:self action:@selector(moreButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_chatBar addSubview:_moreButton];
 
 
         f = [_chatBar frame];
         NSString * osspath = [options valueForKey:@"osspath"];
-        _emojiView = [[UIView alloc] initWithFrame:CGRectMake(0.0,kChatBarHeight, screenWidth, _chatExtbarHeight)];
+        _emojiView = [[UIView alloc] initWithFrame:CGRectMake(0.0,_kChatBarHeight, screenWidth, _chatExtbarHeight)];
 
         self.scrollView = [[UIScrollView alloc] initWithFrame:_emojiView.bounds];
         self.scrollView.delegate = self;
@@ -277,7 +298,7 @@
         }
         self.scrollView.contentSize = CGSizeMake(screenWidth*page, _chatExtbarHeight);
         [self.emojiView addSubview:self.scrollView];
-        int w = round((screenWidth - 7*kInputBarPadding )/6);
+        int w = round((screenWidth - 7*_kInputBarPadding )/6);
         for (int i = 0; i < page; i++) {
             int line = -1;
             int c = 0; //当前行第几个
@@ -286,14 +307,13 @@
                 if(j+1 > _emoji_list.count) break;
                 if(p % 6 == 0) line ++ ;
                 if(c >= 6) c = 0;
-                NSLog(@"当前行第%d个 当前页第%d个 第%d行",c,p,line);
                 NSString *img = [[NSString alloc]initWithFormat:@"%@%@",osspath,_emoji_list[j]];
-                UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(kInputBarPadding + (w + kInputBarPadding) * c  +  i * screenWidth , kInputBarPadding + line * (w + kInputBarPadding)  , w, w)];
+                UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(_kInputBarPadding + (w + _kInputBarPadding) * c  +  i * screenWidth , _kInputBarPadding + line * (w + _kInputBarPadding)  , w, w)];
                 [imageView setTag: j];
                 [imageView setUserInteractionEnabled:YES];
                 UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(choseImage:)];
                 [imageView addGestureRecognizer:tap];
-                imageView.image = [UIImage imageWithData:[NSData dataWithContentsOfURL:[NSURL URLWithString:img]]];
+                [imageView sd_setImageWithURL:[NSURL URLWithString:img]];
                 [self.scrollView addSubview:imageView];
                 c++;
                 p++;
@@ -308,49 +328,47 @@
         [_emojiView setHidden:YES];
         [_chatBar addSubview:_emojiView];
 
-        self.pageControl = [[UIPageControl alloc] initWithFrame:CGRectMake(50, _chatBar.bounds.size.height - kInputBarHeight - safeBottom - 15, screenWidth-100, 12)];
+        self.pageControl = [[UIPageControl alloc] initWithFrame:CGRectMake(50, _chatBar.bounds.size.height - _kChatBarHeight - safeBottom - 15, screenWidth-100, 12)];
         self.pageControl.numberOfPages = page;
         self.pageControl.layer.cornerRadius = 3;
         self.pageControl.currentPageIndicatorTintColor = [UIColor orangeColor];
         self.pageControl.pageIndicatorTintColor = [UIColor grayColor];
         self.pageControl.currentPage = 0;
-        [self.pageControl addTarget:self action:@selector(pageControlAction) forControlEvents:UIControlEventEditingChanged];
+        self.pageControl.userInteractionEnabled = NO;
+//        [self.pageControl addTarget:self action:@selector(pageControlAction) forControlEvents:UIControlEventEditingChanged];
         [_chatBar addSubview:self.pageControl];
 
-        _moreView = [[UIView alloc] initWithFrame:CGRectMake(0.0,kChatBarHeight, screenWidth, _chatExtbarHeight)];
+        _moreView = [[UIView alloc] initWithFrame:CGRectMake(0.0,_kChatBarHeight, screenWidth, _chatExtbarHeight)];
         NSArray *moreButton = [options objectForKey:@"buttons"];
-        CGFloat moreButtonWidth = (screenWidth - 5 * kInputBarPadding)/4;
+        CGFloat moreButtonWidth = (screenWidth - 5 * 2 * _kInputBarPadding)/4;
         int i = 0;
         CGFloat row = 0.0;
         for (NSDictionary * button in moreButton) {
 
             if(i > 0 && i % 4 == 0) row = row + 1.0;
-            AlignButton * btn =[[AlignButton alloc] initWithFrame :CGRectMake(kInputBarPadding + (i%4) * (kInputBarPadding + moreButtonWidth),
-                                                                        kInputBarPadding + row * (kInputBarPadding + moreButtonWidth),
-                                     moreButtonWidth,
-                                     moreButtonWidth)];
-            btn.alignType = AlignType_TextBottom;
-            btn.padding = 5.0;
-            [btn setImage: [UIImage imageNamed: [button objectForKey:@"icon"]] forState:UIControlStateNormal];
-            btn.titleLabel.textAlignment = NSTextAlignmentCenter;
-            [btn setTitle:[button objectForKey:@"title"] forState:UIControlStateNormal];
-            btn.titleLabel.font = [UIFont systemFontOfSize:14.0];
-            [btn setTitleColor: [self colorWithHex:0x333333FF] forState:UIControlStateNormal];
-            [btn addTarget:self action:@selector(moreButtonItemTap:) forControlEvents:UIControlEventTouchUpInside];
-            [_moreView addSubview:btn];
-            i ++ ;
+
+                UIButton * btn = [[UIButton alloc] initWithFrame:CGRectMake(_kInputBarPadding*2 + (i%4) * (_kInputBarPadding*2 + moreButtonWidth),
+                                                                          _kInputBarPadding*2 + row * (_kInputBarPadding*5 + moreButtonWidth),
+                                                                          moreButtonWidth,
+                                                                          moreButtonWidth)];
+                NSString * path = [NSString stringWithFormat:@"%@%@",_filepath , [button objectForKey:@"icon"]];
+                [btn setImage: [UIImage imageWithContentsOfFile:path] forState:UIControlStateNormal];
+                [btn setTag: i];
+                [btn addTarget:self action:@selector(moreButtonItemTap:) forControlEvents:UIControlEventTouchUpInside];
+                [_moreView addSubview:btn];
+                CGRect btnf = btn.frame;
+                UILabel * label = [[UILabel alloc] initWithFrame:CGRectMake(btnf.origin.x, btnf.origin.y +  moreButtonWidth + _kInputBarPadding, moreButtonWidth, 20)];
+                [label setFont:[UIFont systemFontOfSize: 12]];
+                [label setTextColor:[UIColor grayColor]];
+                [label setText:[button objectForKey:@"title"]];
+                [label setTextAlignment:NSTextAlignmentCenter];
+                [_moreView addSubview:label];
+                i ++ ;
         }
 
         [_moreView setHidden:YES];
         [_chatBar addSubview:_moreView];
-
-        NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:2];
-        [message setObject:@"inputbarShow" forKey:@"type"];
-
-        [message setObject:@(_inputBarHeight) forKey:@"height"];
-        CDVPluginResult* res = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
-        [res setKeepCallbackAsBool:YES];
-        [self.commandDelegate sendPluginResult: res callbackId:_chat_cdvcommand.callbackId];
+        [self send_event:_chat_cdvcommand withMessage:@{@"type":@"inputbarShow",@"height":@(_inputBarHeight)} Alive:YES State:YES];
     }
     [UIView animateWithDuration: 0.1 animations: ^(void){
         CGRect r = [self.chatBar frame];
@@ -359,26 +377,131 @@
     }];
 }
 
+- (void)change_textField_placeholder:(CDVInvokedUrlCommand *)command
+{
+    if(_textField){
+        NSDictionary *options = [command.arguments objectAtIndex: 0];
+        _textField.placeholder = [options objectForKey:@"placeholder"] ?: @"请输入...";
+    }
+}
+
+-(void)resetChatBar:(CDVInvokedUrlCommand *)command
+{
+    [self resetChatBar];
+}
+- (void)closeChatBar:(CDVInvokedUrlCommand *)command
+{
+    if(_chatBar){
+        _chat_cdvcommand = nil;
+        [self.textField removeFromSuperview];
+        [self.chatBar removeFromSuperview];
+        self.chatBar = nil;
+        if(self->_longTap){
+            [self.viewController.view removeGestureRecognizer:self->_longTap];
+            self->_longTap = nil;
+        }
+    }
+}
+
+
+- (void)showInputBar:(CDVInvokedUrlCommand *)command
+{
+    if (_inputBar) return;
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    _input_command = command;
+
+    BOOL is_send = [[options valueForKey:@"is_send"] boolValue] || NO;
+    _kInputBarPadding = [[options valueForKey:@"padding"] intValue];
+    int InputBarHeight = [[options valueForKey:@"height"] intValue];
+    int InputBarTitleHeight = [[options valueForKey:@"titleHeight"] intValue];
+    int bgcolor = [[options valueForKey:@"bgcolor"] intValue];
+    int radius = [[options valueForKey:@"radius"] intValue];
+
+    //Draw backdrop
+    _backdropView = [[UIView alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    _backdropView.backgroundColor = [self colorWithHex:0x00000030];
+    [_backdropView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(closeInputBar:)]];
+    [self.viewController.view addSubview:_backdropView];
+
+    //Draw InputBar
+    CGFloat safeBottom =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+
+    _inputBarRealHeight = _kInputBarPadding * 3 + InputBarHeight + InputBarTitleHeight + safeBottom;
+
+    CGSize screen = [UIScreen mainScreen].bounds.size;
+    CGRect inputBarRect = CGRectMake(0.0, screen.height - _inputBarRealHeight, screen.width, _inputBarRealHeight);
+    _inputBar = [[UIView alloc] initWithFrame: inputBarRect];
+    _inputBar.backgroundColor = [self colorWithHex:bgcolor];
+    [self.viewController.view addSubview:_inputBar];
+
+
+    UILabel * titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(_kInputBarPadding + 3, _kInputBarPadding,
+                                                                     screen.width - _kInputBarPadding * 2 - 3,
+                                                                     InputBarTitleHeight)];
+    titleLabel.text = [options valueForKey:@"title"] ?: @"请输入...";
+    titleLabel.font = [UIFont systemFontOfSize:14.0];
+    titleLabel.textColor = [UIColor grayColor];
+    [_inputBar addSubview:titleLabel];
+
+    //Draw textField
+    CGFloat textFieldWidth = screen.width - _kInputBarPadding * 2;
+    CGRect textFieldRect = CGRectMake(_kInputBarPadding, _kInputBarPadding * 2 + InputBarTitleHeight,
+                                      textFieldWidth,
+                                      InputBarHeight);
+    _inputTextField = [[UITextField alloc] initWithFrame:textFieldRect];
+    _inputTextField.layer.cornerRadius = radius;
+    _inputTextField.backgroundColor = UIColor.groupTableViewBackgroundColor;
+    _inputTextField.delegate = self;
+    _inputTextField.textColor = [UIColor blackColor];
+    _inputTextField.placeholder = [options valueForKey:@"placeholder"] ?: @"请输入...";
+    _inputTextField.text = [options valueForKey:@"text"] ?: @"";
+    if(is_send){
+        _inputTextField.returnKeyType = UIReturnKeySend;
+    }else{
+        _inputTextField.returnKeyType = UIReturnKeyDone;
+    }
+
+    UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding, _kInputBarPadding)];
+    _inputTextField.leftView = paddingView;
+    _inputTextField.rightView = paddingView;
+    _inputTextField.leftViewMode = UITextFieldViewModeAlways;
+    _inputTextField.rightViewMode = UITextFieldViewModeAlways;
+
+    UIView *borderView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, screen.width, 1.0)];
+    borderView.backgroundColor = [self colorWithHex:0xEEEEEEFF];
+    [_inputBar addSubview: borderView];
+    [_inputBar addSubview: _inputTextField];
+
+    [_inputTextField becomeFirstResponder];
+}
+
+#pragma mark Keyboard Event
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField
+{
+    if(_chatBar){
+        [self send_event:_chat_cdvcommand withMessage:@{@"type":@"send",@"text":textField.text} Alive:YES State:YES];
+        [_textField setText:@""];
+    }
+    if(_inputBar){
+        [self send_event:_input_command withMessage:@{@"type":@"send",@"text":textField.text} Alive:NO State:YES];
+        [self closeInputBar];
+    }
+    return true;
+}
 
 - (void)onKeyboardWillHide:(NSNotification *)sender
 {
+    if (_inputBar){
+        [self closeInputBar];
+        return;
+    }
     if (_chatBar){
         _KeyboardHeight = 0;
         if(!_isExtBarOpen){
             [self resetChatBar];
         }
     }
-//    if (_inputbar){
-//        CGRect r = [_inputbar frame];
-//        r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight;
-//        r.size.height = _inputBarHeight;
-//        [_inputbar setFrame:r];
-//        [_backdropView removeFromSuperview];
-//        [_inputTextField removeFromSuperview];
-//        [_inputbar removeFromSuperview];
-//        _inputbar = nil;
-//        _cdvcommand = nil;
-//    }
 }
 
 - (void)onKeyboardWillShow:(NSNotification *)note
@@ -386,12 +509,12 @@
     CGRect rect = [[note.userInfo valueForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
     CGFloat safeBottom =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
     double height = rect.size.height;
-//    if (_inputbar){
-//        CGRect r = [_inputbar frame];
-//        r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarHeight - height + safeBottom;
-//        r.size.height = _inputBarHeight - safeBottom;
-//        [_inputbar setFrame:r];
-//    }
+    if (_inputBar){
+        CGRect r = [_inputBar frame];
+        r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarRealHeight - height + safeBottom;
+        r.size.height = _inputBarRealHeight - safeBottom;
+        [_inputBar setFrame:r];
+    }
     if (_chatBar){
         _KeyboardHeight = height;
         if(_isExtBarOpen){
@@ -599,6 +722,7 @@
 
 -(void)touchfeedback
 {
+    if(!_needfeedback) return;
     UIImpactFeedbackGenerator *feedBackGenertor = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
     [feedBackGenertor impactOccurred];
 }
