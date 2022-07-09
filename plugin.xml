@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <plugin id="cordova-plugin-inputbar" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0">
-    <name>CDVLocalWWW</name>
+    <name>CDVInputBar</name>
     <js-module name="CDVInputBar" src="www/inputbar.js">
         <clobbers target="CDVInputBar" />
     </js-module>
