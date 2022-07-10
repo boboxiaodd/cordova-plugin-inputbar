@@ -180,7 +180,10 @@
         _input_command = nil;
     }
 }
-
+-(void)closeInputBar:(UIView *)sender
+{
+    [self closeInputBar];
+}
 
 #pragma mark Cordova 接口
 
