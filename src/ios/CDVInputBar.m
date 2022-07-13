@@ -68,7 +68,7 @@
     [nc addObserver:self selector:@selector(onKeyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSArray *directoryPaths = [fileManager URLsForDirectory:NSLibraryDirectory inDomains:NSUserDomainMask];
-    NSURL *distPath = [[directoryPaths firstObject] URLByAppendingPathComponent:@"NoCloud/www/www/"];
+    NSURL *distPath = [[directoryPaths firstObject] URLByAppendingPathComponent:@"NoCloud/www/www"];
     _filepath = [distPath path];
 
 }
@@ -200,10 +200,10 @@
         _needfeedback = [[options valueForKey:@"feedback"] boolValue];
         _inputBarHeight = _kChatBarHeight + safeBottom;
         _emoji_list = [options objectForKey:@"emoji"];
-        NSString * ic_voice = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_voice"]];
-        NSString * ic_keyboard = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_keyboard"]];
-        NSString * ic_emoji = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_emoji"]];
-        NSString * ic_more = [NSString stringWithFormat:@"%@%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_more"]];
+        NSString * ic_voice = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_voice"]];
+        NSString * ic_keyboard = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_keyboard"]];
+        NSString * ic_emoji = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_emoji"]];
+        NSString * ic_more = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_more"]];
         int input_radius = [[options objectForKey:@"radius"] intValue];
         _kInputBarPadding = [[options objectForKey:@"padding"] intValue];
         CGFloat emojiWidth = (screenWidth - 6 * _kInputBarPadding)/5;
@@ -353,7 +353,7 @@
                                                                           _kInputBarPadding*2 + row * (_kInputBarPadding*5 + moreButtonWidth),
                                                                           moreButtonWidth,
                                                                           moreButtonWidth)];
-                NSString * path = [NSString stringWithFormat:@"%@%@",_filepath , [button objectForKey:@"icon"]];
+                NSString * path = [NSString stringWithFormat:@"%@/%@",_filepath , [button objectForKey:@"icon"]];
                 [btn setImage: [UIImage imageWithContentsOfFile:path] forState:UIControlStateNormal];
                 [btn setTag: i];
                 [btn addTarget:self action:@selector(moreButtonItemTap:) forControlEvents:UIControlEventTouchUpInside];
