@@ -55,6 +55,8 @@
 @property (nonatomic,strong) UIView * backdropView;
 @property (nonatomic,strong) UITextField * inputTextField;
 @property (nonatomic,readwrite) int inputBarRealHeight;
+
+@property (nonatomic,strong) CDVInvokedUrlCommand * record_command;
 @end
 
 @implementation CDVInputBar
@@ -452,7 +454,7 @@
                                       InputBarHeight);
     _inputTextField = [[UITextField alloc] initWithFrame:textFieldRect];
     _inputTextField.layer.cornerRadius = radius;
-    _inputTextField.backgroundColor = UIColor.groupTableViewBackgroundColor;
+    _inputTextField.backgroundColor = [UIColor whiteColor];
     _inputTextField.delegate = self;
     _inputTextField.textColor = [UIColor blackColor];
     _inputTextField.placeholder = [options valueForKey:@"placeholder"] ?: @"请输入...";
@@ -475,6 +477,23 @@
     [_inputBar addSubview: _inputTextField];
 
     [_inputTextField becomeFirstResponder];
+}
+
+-(void)recordAudio:(CDVInvokedUrlCommand *)command
+{
+    NSDictionary *options = [command.arguments objectAtIndex: 0];
+    NSString * state = [options valueForKey:@"state"];
+    if([state isEqualToString:@"start"]){
+        _record_command = command;
+        _startTime = [self timestamp];
+        [MXMp3Recorder recorderWithCachePath:nil delegate:self];
+        // 开始录制音频
+        [MXMp3Recorder.shareInstance startRecordingAndDecibelUpdate:NO];
+    }
+    if([state isEqualToString:@"stop"]){
+        _endTime = [self timestamp];
+        [MXMp3Recorder.shareInstance stopRecording];
+    }
 }
 
 #pragma mark Keyboard Event
@@ -635,7 +654,8 @@
 #pragma mark MXMp3RecorderDelegate
 
 - (void)mp3RecorderDidFailToRecord:(MXMp3Recorder *)recorder {
-    [self send_event:_chat_cdvcommand withMessage:@{@"type":@"error_time_short"} Alive:YES State:YES];
+    if(_chat_cdvcommand) [self send_event:_chat_cdvcommand withMessage:@{@"type":@"error_time_short"} Alive:YES State:YES];
+    if(_record_command) [self send_event:_record_command withMessage:@{@"type":@"error_time_short"} Alive:YES State:YES];
 }
 
 - (void)mp3RecorderDidBeginToConvert:(MXMp3Recorder *)recorder {
@@ -643,14 +663,9 @@
 }
 
 - (void)mp3Recorder:(MXMp3Recorder *)recorder didFinishingConvertingWithMP3FilePath:(NSString *)filePath {
-    if(_chat_cdvcommand){
-        [self send_event:_chat_cdvcommand withMessage:@{@"event":@"filish",@"path": filePath,@"duration":@(_endTime - _startTime)} Alive:NO State:YES];
-        return;
-    }
-    [self send_event:_chat_cdvcommand withMessage:@{@"type":@"voice",@"duration":@(_endTime - _startTime),@"path":filePath} Alive:YES State:YES];
+    if(_chat_cdvcommand) [self send_event:_chat_cdvcommand withMessage:@{@"event":@"filish",@"path": filePath,@"duration":@(_endTime - _startTime)} Alive:NO State:YES];
+    if(_record_command) [self send_event:_chat_cdvcommand withMessage:@{@"type":@"voice",@"duration":@(_endTime - _startTime),@"path":filePath} Alive:NO State:YES];
 }
-
-
 
 
 -(void)handleLongTap:(UILongPressGestureRecognizer *)sender
