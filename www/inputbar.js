@@ -15,8 +15,11 @@ const CDVInputBar = {
     showInputBar:function (success,option){
         exec(success,null,'CDVInputBar','showInputBar',[option]);
     },
-    recordAudio:function (success,option){
-        exec(success,null,'CDVInputBar','recordAudio',[option]);
+    start_voice_record:function (){
+        exec(null,null,'CDVInputBar','start_voice_record',[]);
+    },
+    stop_voice_record:function (){
+        exec(null,null,'CDVInputBar','stop_voice_record',[]);
     }
 };
 module.exports = CDVInputBar;

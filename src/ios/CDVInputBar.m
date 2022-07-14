@@ -479,22 +479,26 @@
     [_inputTextField becomeFirstResponder];
 }
 
--(void)recordAudio:(CDVInvokedUrlCommand *)command
+
+-(void)start_voice_record:(CDVInvokedUrlCommand *)command
 {
-    NSDictionary *options = [command.arguments objectAtIndex: 0];
-    NSString * state = [options valueForKey:@"state"];
-    if([state isEqualToString:@"start"]){
-        _record_command = command;
-        _startTime = [self timestamp];
-        [MXMp3Recorder recorderWithCachePath:nil delegate:self];
-        // 开始录制音频
-        [MXMp3Recorder.shareInstance startRecordingAndDecibelUpdate:NO];
-    }
-    if([state isEqualToString:@"stop"]){
-        _endTime = [self timestamp];
-        [MXMp3Recorder.shareInstance stopRecording];
-    }
+
+    NSLog(@"开始录制");
+    _record_command = command;
+    _startTime = [self timestamp];
+    MXMp3Recorder.shareInstance.cachePath = nil;
+    MXMp3Recorder.shareInstance.delegate = self;
+    [MXMp3Recorder.shareInstance startRecordingAndDecibelUpdate:NO];
+    [self send_event:_record_command withMessage:@{@"event":@"start"} Alive:YES State:YES];
+
 }
+-(void)stop_voice_record:(CDVInvokedUrlCommand *)command
+{
+    _endTime = [self timestamp];
+    [MXMp3Recorder.shareInstance stopRecording];
+}
+
+
 
 #pragma mark Keyboard Event
 
