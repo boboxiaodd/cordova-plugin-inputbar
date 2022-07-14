@@ -489,7 +489,7 @@
     MXMp3Recorder.shareInstance.cachePath = nil;
     MXMp3Recorder.shareInstance.delegate = self;
     [MXMp3Recorder.shareInstance startRecordingAndDecibelUpdate:NO];
-    [self send_event:_record_command withMessage:@{@"event":@"start"} Alive:YES State:YES];
+    [self send_event:_record_command withMessage:@{@"type":@"start"} Alive:YES State:YES];
 
 }
 -(void)stop_voice_record:(CDVInvokedUrlCommand *)command
@@ -667,7 +667,7 @@
 }
 
 - (void)mp3Recorder:(MXMp3Recorder *)recorder didFinishingConvertingWithMP3FilePath:(NSString *)filePath {
-    if(_chat_cdvcommand) [self send_event:_chat_cdvcommand withMessage:@{@"event":@"filish",@"path": filePath,@"duration":@(_endTime - _startTime)} Alive:NO State:YES];
+    if(_chat_cdvcommand) [self send_event:_chat_cdvcommand withMessage:@{@"type":@"filish",@"path": filePath,@"duration":@(_endTime - _startTime)} Alive:NO State:YES];
     if(_record_command) [self send_event:_record_command withMessage:@{@"type":@"voice",@"duration":@(_endTime - _startTime),@"path":filePath} Alive:NO State:YES];
 }
 
