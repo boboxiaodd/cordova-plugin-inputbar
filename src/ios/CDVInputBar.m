@@ -189,7 +189,6 @@
 
 #pragma mark Cordova 接口
 
-
 - (void)createChatBar:(CDVInvokedUrlCommand *)command
 {
     _chat_cdvcommand = command;
@@ -205,10 +204,11 @@
         int input_bgcolor = [[options valueForKey:@"input_bgcolor"] intValue] ?: 0xeeeeee;
         _inputBarHeight = _kChatBarHeight + safeBottom;
         _emoji_list = [options objectForKey:@"emoji"];
-        NSString * ic_voice = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_voice"]];
-        NSString * ic_keyboard = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_keyboard"]];
-        NSString * ic_emoji = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_emoji"]];
-        NSString * ic_more = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_more"]];
+        NSString * osspath = [options valueForKey:@"osspath"];
+        NSString * ic_voice = [osspath stringByAppendingString:[[options objectForKey:@"icons"] valueForKey:@"ic_voice"]];
+        NSString * ic_keyboard = [osspath stringByAppendingString:[[options objectForKey:@"icons"] valueForKey:@"ic_keyboard"]];
+        NSString * ic_emoji = [osspath stringByAppendingString:[[options objectForKey:@"icons"] valueForKey:@"ic_emoji"]];
+        NSString * ic_more = [osspath stringByAppendingString:[[options objectForKey:@"icons"] valueForKey:@"ic_more"]];
         int input_radius = [[options objectForKey:@"radius"] intValue];
         _kInputBarPadding = [[options objectForKey:@"padding"] intValue];
         CGFloat emojiWidth = (screenWidth - 6 * _kInputBarPadding)/5;
@@ -220,15 +220,14 @@
 
         CGFloat buttonWidth = _kChatBarHeight - 2 * _kInputBarPadding;
         _voiceButton = [[UIButton alloc] initWithFrame:CGRectMake(_kInputBarPadding,_kInputBarPadding,buttonWidth,buttonWidth)];
-        UIImage * voice_img = [UIImage imageWithContentsOfFile:ic_voice];
-        [_voiceButton setImage: voice_img forState:UIControlStateNormal];
+        [_voiceButton sd_setImageWithURL: [NSURL URLWithString:ic_voice] forState:UIControlStateNormal];
 
         [_voiceButton addTarget:self action:@selector(voiceButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_chatBar addSubview:_voiceButton];
         CGRect f;
         f = [_voiceButton frame];
         _keyboardButton = [[UIButton alloc] initWithFrame:f];
-        [_keyboardButton setBackgroundImage:[UIImage imageWithContentsOfFile:ic_keyboard] forState:UIControlStateNormal];
+        [_keyboardButton sd_setBackgroundImageWithURL:[NSURL URLWithString:ic_keyboard] forState:UIControlStateNormal];
 
         [_keyboardButton addTarget:self action:@selector(keyboardButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_keyboardButton setHidden:YES];
@@ -280,7 +279,7 @@
 
 
         _emojiButton = [[UIButton alloc] initWithFrame:CGRectMake(f.origin.x + textFieldWidth + _kInputBarPadding ,_kInputBarPadding, buttonWidth,buttonWidth)];
-        [_emojiButton setBackgroundImage:[UIImage imageWithContentsOfFile:ic_emoji] forState:UIControlStateNormal];
+        [_emojiButton sd_setImageWithURL:[NSURL URLWithString:ic_emoji] forState:UIControlStateNormal];
         [_emojiButton addTarget:self action:@selector(emojiButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_chatBar addSubview:_emojiButton];
 
@@ -293,13 +292,14 @@
 
         f = [_emojiButton frame];
         _moreButton = [[UIButton alloc] initWithFrame:CGRectMake(f.origin.x + buttonWidth + _kInputBarPadding ,_kInputBarPadding, buttonWidth,buttonWidth)];
-        [_moreButton setBackgroundImage:[UIImage imageWithContentsOfFile:ic_more] forState:UIControlStateNormal];
+
+        [_moreButton sd_setImageWithURL:[NSURL URLWithString:ic_more] forState:UIControlStateNormal];
         [_moreButton addTarget:self action:@selector(moreButtonTap:) forControlEvents:UIControlEventTouchUpInside];
         [_chatBar addSubview:_moreButton];
 
 
         f = [_chatBar frame];
-        NSString * osspath = [options valueForKey:@"osspath"];
+
         _emojiView = [[UIView alloc] initWithFrame:CGRectMake(0.0,_kChatBarHeight, screenWidth, _chatExtbarHeight)];
 
         self.scrollView = [[UIScrollView alloc] initWithFrame:_emojiView.bounds];
@@ -363,8 +363,7 @@
                                                                           _kInputBarPadding*2 + row * (_kInputBarPadding*5 + moreButtonWidth),
                                                                           moreButtonWidth,
                                                                           moreButtonWidth)];
-                NSString * path = [NSString stringWithFormat:@"%@/%@",_filepath , [button objectForKey:@"icon"]];
-                [btn setImage: [UIImage imageWithContentsOfFile:path] forState:UIControlStateNormal];
+                [btn sd_setImageWithURL:[NSURL URLWithString:[osspath stringByAppendingString:[button objectForKey:@"icon"]]] forState:UIControlStateNormal];
                 [btn setTag: i];
                 [btn addTarget:self action:@selector(moreButtonItemTap:) forControlEvents:UIControlEventTouchUpInside];
                 [_moreView addSubview:btn];
