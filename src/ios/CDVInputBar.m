@@ -200,6 +200,9 @@
 
         _kChatBarHeight = [[options objectForKey:@"height"] intValue];
         _needfeedback = [[options valueForKey:@"feedback"] boolValue];
+        int text_color = [[options valueForKey:@"textcolor"] intValue] ?: 0x000000;
+        int placeholder_color = [[options valueForKey:@"placeholder_color"] intValue] ?: 0x999999;
+        int input_bgcolor = [[options valueForKey:@"input_bgcolor"] intValue] ?: 0xeeeeee;
         _inputBarHeight = _kChatBarHeight + safeBottom;
         _emoji_list = [options objectForKey:@"emoji"];
         NSString * ic_voice = [NSString stringWithFormat:@"%@/%@",_filepath , [[options objectForKey:@"icons"] valueForKey:@"ic_voice"]];
@@ -212,7 +215,7 @@
         _chatExtbarHeight = emojiWidth * 4 + 5 * _kInputBarPadding;
 
         _chatBar = [[UIView alloc] initWithFrame:CGRectMake(0.0, [UIScreen mainScreen].bounds.size.height , screenWidth, _inputBarHeight + 15 + _chatExtbarHeight)];
-        _chatBar.backgroundColor = [self colorWithHex:0xFFFFFFFF];
+        _chatBar.backgroundColor = [self colorWithHex:0xFFFFFF];
         [self.viewController.view addSubview:_chatBar];
 
         CGFloat buttonWidth = _kChatBarHeight - 2 * _kInputBarPadding;
@@ -239,10 +242,15 @@
             _textField.layer.cornerRadius = buttonWidth / 2;
         }
         _textField.font = [UIFont systemFontOfSize:16];
-        _textField.textColor = [UIColor blackColor];
-        _textField.backgroundColor = [UIColor colorWithHex:0xf3f3f3 alpha:1];
+        _textField.textColor = [self colorWithHex:text_color];
+        _textField.backgroundColor = [self colorWithHex:input_bgcolor];
         _textField.delegate = self;
-        _textField.placeholder = [options objectForKey:@"placeholder"] ?: @"请输入...";
+        _textField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:[options objectForKey:@"placeholder"] ?: @"请输入..."
+                                                                           attributes:@{
+                                                                              NSForegroundColorAttributeName: [UIColor colorWithHex:placeholder_color],
+                                                                              NSFontAttributeName : [UIFont systemFontOfSize:16]
+                                                                           }
+                                                                         ];
         UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding, buttonWidth)];
         _textField.leftView = paddingView;
         _textField.rightView = paddingView;
@@ -418,12 +426,14 @@
     _kInputBarPadding = [[options valueForKey:@"padding"] intValue];
     int InputBarHeight = [[options valueForKey:@"height"] intValue];
     int InputBarTitleHeight = [[options valueForKey:@"titleHeight"] intValue];
-    int bgcolor = [[options valueForKey:@"bgcolor"] intValue];
+    int bgcolor = [[options valueForKey:@"bgcolor"] intValue] ?: 0xffffff;
     int radius = [[options valueForKey:@"radius"] intValue];
-
+    int text_color = [[options valueForKey:@"textcolor"] intValue] ?: 0x000000;
+    int placeholder_color = [[options valueForKey:@"placeholder_color"] intValue] ?: 0x999999;
+    int input_bgcolor = [[options valueForKey:@"input_bgcolor"] intValue] ?: 0xf3f3f3;
     //Draw backdrop
     _backdropView = [[UIView alloc] initWithFrame:[UIScreen mainScreen].bounds];
-    _backdropView.backgroundColor = [self colorWithHex:0x00000030];
+    _backdropView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.3];
     [_backdropView addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(closeInputBar:)]];
     [self.viewController.view addSubview:_backdropView];
 
@@ -438,14 +448,16 @@
     _inputBar.backgroundColor = [self colorWithHex:bgcolor];
     [self.viewController.view addSubview:_inputBar];
 
+    if(InputBarTitleHeight > 0){
 
-    UILabel * titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(_kInputBarPadding + 3, _kInputBarPadding,
-                                                                     screen.width - _kInputBarPadding * 2 - 3,
-                                                                     InputBarTitleHeight)];
-    titleLabel.text = [options valueForKey:@"title"] ?: @"请输入...";
-    titleLabel.font = [UIFont systemFontOfSize:14.0];
-    titleLabel.textColor = [UIColor grayColor];
-    [_inputBar addSubview:titleLabel];
+        UILabel * titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(_kInputBarPadding + 3, _kInputBarPadding,
+                                                                         screen.width - _kInputBarPadding * 2 - 3,
+                                                                         InputBarTitleHeight)];
+        titleLabel.text = [options valueForKey:@"title"] ?: @"请输入...";
+        titleLabel.font = [UIFont systemFontOfSize:14.0];
+        titleLabel.textColor = [UIColor grayColor];
+        [_inputBar addSubview:titleLabel];
+    }
 
     //Draw textField
     CGFloat textFieldWidth = screen.width - _kInputBarPadding * 2;
@@ -454,10 +466,17 @@
                                       InputBarHeight);
     _inputTextField = [[UITextField alloc] initWithFrame:textFieldRect];
     _inputTextField.layer.cornerRadius = radius;
-    _inputTextField.backgroundColor = [UIColor whiteColor];
+    _inputTextField.backgroundColor = [self colorWithHex:input_bgcolor];
     _inputTextField.delegate = self;
-    _inputTextField.textColor = [UIColor blackColor];
-    _inputTextField.placeholder = [options valueForKey:@"placeholder"] ?: @"请输入...";
+    _inputTextField.textColor = [self colorWithHex:text_color];
+    _inputTextField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:[options objectForKey:@"placeholder"] ?: @"请输入..."
+                                                                       attributes:@{
+                                                                          NSForegroundColorAttributeName: [UIColor colorWithHex:placeholder_color],
+                                                                          NSFontAttributeName : [UIFont systemFontOfSize:16]
+                                                                       }
+                                                                     ];
+
+
     _inputTextField.text = [options valueForKey:@"text"] ?: @"";
     if(is_send){
         _inputTextField.returnKeyType = UIReturnKeySend;
@@ -472,7 +491,7 @@
     _inputTextField.rightViewMode = UITextFieldViewModeAlways;
 
     UIView *borderView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, screen.width, 1.0)];
-    borderView.backgroundColor = [self colorWithHex:0xEEEEEEFF];
+    borderView.backgroundColor = [UIColor colorWithHex:0xEEEEEEFF];
     [_inputBar addSubview: borderView];
     [_inputBar addSubview: _inputTextField];
 
@@ -667,7 +686,8 @@
 }
 
 - (void)mp3Recorder:(MXMp3Recorder *)recorder didFinishingConvertingWithMP3FilePath:(NSString *)filePath {
-    if(_chat_cdvcommand) [self send_event:_chat_cdvcommand withMessage:@{@"type":@"filish",@"path": filePath,@"duration":@(_endTime - _startTime)} Alive:NO State:YES];
+    NSLog(@"转换完成 %@",filePath);
+    if(_chat_cdvcommand) [self send_event:_chat_cdvcommand withMessage:@{@"type":@"voice",@"path": filePath,@"duration":@(_endTime - _startTime)} Alive:YES State:YES];
     if(_record_command) [self send_event:_record_command withMessage:@{@"type":@"voice",@"duration":@(_endTime - _startTime),@"path":filePath} Alive:NO State:YES];
 }
 
@@ -728,11 +748,10 @@
 }
 
 - (UIColor *) colorWithHex:(int)color {
-    float red = (color & 0xff000000) >> 24;
-    float green = (color & 0x00ff0000) >> 16;
-    float blue = (color & 0x0000ff00) >> 8;
-    float alpha = (color & 0x000000ff);
-    return [UIColor colorWithRed:red/255.0 green:green/255.0 blue:blue/255.0 alpha:alpha/255.0];
+    float red = (color & 0xff0000) >> 16;
+    float green = (color & 0x00ff00) >> 8;
+    float blue = (color & 0x0000ff);
+    return [UIColor colorWithRed:red/255.0 green:green/255.0 blue:blue/255.0 alpha:1];
 }
 
 - (NSTimeInterval)timestamp
