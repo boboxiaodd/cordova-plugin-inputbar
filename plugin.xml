@@ -27,6 +27,7 @@
             </config>
             <pods use-frameworks="true">
                 <pod name="Mp3Recorder" options=":git => 'https://github.com/boboxiaodd/Mp3Recorder.git'" />
+                <pod name="SDWebImage" />
             </pods>
         </podspec>
 
