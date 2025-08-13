@@ -1,5 +1,5 @@
 {
-    "name": "inputbar",
+    "name": "cordova-plugin-inputbar",
     "version": "0.0.1",
     "description": "cordova inputbar",
     "cordova": {
