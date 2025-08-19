@@ -236,7 +236,7 @@
         [_chatBar addSubview:_keyboardButton];
 
         CGFloat textFieldWidth = screenWidth - 3 * buttonWidth - 5 * _kInputBarPadding;
-        _textField = [[UITextField alloc] initWithFrame:CGRectMake(f.origin.x + buttonWidth + _kInputBarPadding, _kInputBarPadding, textFieldWidth, 40)];
+        _textField = [[UITextField alloc] initWithFrame:CGRectMake(f.origin.x + buttonWidth + _kInputBarPadding, _kInputBarPadding, textFieldWidth, 36)];
 
         if (input_radius) {
             _textField.layer.cornerRadius = input_radius;
@@ -254,7 +254,7 @@
                                                 NSFontAttributeName: [UIFont systemFontOfSize:16]
                                             }
             ];
-        UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding, buttonWidth)];
+        UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding*2, buttonWidth)];
         _textField.leftView = paddingView;
         _textField.rightView = paddingView;
         _textField.leftViewMode = UITextFieldViewModeAlways;
@@ -626,8 +626,36 @@
 
 -(void)resetChatBar:(CDVInvokedUrlCommand *)command
 {
-    [self resetChatBar];
+    if(_isExtBarOpen){
+        [self resetChatBar];
+    }
 }
+- (void)hideChatBar:(CDVInvokedUrlCommand *)command
+{
+    if(_chatBar){
+        NSDictionary *options = [command.arguments objectAtIndex: 0];
+        BOOL reset = [[options valueForKey:@"reset"] boolValue];
+        if(reset){
+            [self resetChatBar];
+        }
+        [UIView animateWithDuration: 0.1 animations: ^(void){
+            CGRect r = [self.chatBar frame];
+            r.origin.y = [UIScreen mainScreen].bounds.size.height + self.inputBarHeight;
+            [self.chatBar setFrame:r];
+        }];
+    }
+}
+- (void)showChatBar:(CDVInvokedUrlCommand *)command
+{
+    if(_chatBar){
+        [UIView animateWithDuration: 0.1 animations: ^(void){
+            CGRect r = [self.chatBar frame];
+            r.origin.y = [UIScreen mainScreen].bounds.size.height - self.inputBarHeight;
+            [self.chatBar setFrame:r];
+        }];
+    }
+}
+
 - (void)closeChatBar:(CDVInvokedUrlCommand *)command
 {
     if(_chatBar){
@@ -665,7 +693,7 @@
     [self.viewController.view addSubview:_backdropView];
 
     //Draw InputBar
-    CGFloat safeBottom =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+    CGFloat safeBottom =  self.viewController.view.safeAreaInsets.bottom;
 
     _inputBarRealHeight = _kInputBarPadding * 3 + InputBarHeight + InputBarTitleHeight + safeBottom;
 
@@ -778,7 +806,7 @@
 - (void)onKeyboardWillShow:(NSNotification *)note
 {
     CGRect rect = [[note.userInfo valueForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
-    CGFloat safeBottom =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+    CGFloat safeBottom =  self.viewController.view.safeAreaInsets.bottom;
     double height = rect.size.height;
     if (_inputBar){
         CGRect r = [_inputBar frame];
