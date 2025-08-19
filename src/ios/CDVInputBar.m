@@ -122,7 +122,7 @@
         [self openExtBar];
         [self.textField resignFirstResponder];
         [self.emojiView setHidden:NO];
-        if(_moreButton) [self.moreView setHidden:YES]; else [self.moreView setHidden:NO];
+        if(self->_moreButton) [self.moreView setHidden:YES]; else [self.moreView setHidden:NO];
     }];
 }
 - (void)moreButtonTap:(UIButton *)sender
@@ -191,7 +191,7 @@
 - (void)createChatBarA:(CDVInvokedUrlCommand *)command
 {
     _chat_cdvcommand = command;
-    CGFloat safeBottom =  UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+    CGFloat safeBottom =  self.viewController.view.safeAreaInsets.bottom;
     CGFloat screenWidth = [UIScreen mainScreen].bounds.size.width;
 
     if (!_chatBar) {
@@ -279,7 +279,7 @@
         _voiceRecorderButton.enabled = NO;
         _voiceRecorderButton.titleLabel.font = [UIFont systemFontOfSize:16.0];
         [_voiceRecorderButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-        [_voiceRecorderButton setTitle:@"按住说话" forState:UIControlStateNormal];
+        [_voiceRecorderButton setTitle: NSLocalizedString(@"按住说话",@"") forState:UIControlStateNormal];
         [_voiceRecorderButton setHidden:YES];
         [_chatBar addSubview:_voiceRecorderButton];
 
@@ -537,15 +537,17 @@
         self.scrollView.contentSize = CGSizeMake(screenWidth*page, _chatExtbarHeight);
         [self.emojiView addSubview:self.scrollView];
         int w = round((screenWidth - 7*_kInputBarPadding )/6);
+        int emojicount = [[_emoji_list valueForKey:@"count"] intValue];
+        NSString * emojibase = [_emoji_list valueForKey:@"base"];
         for (int i = 0; i < page; i++) {
             int line = -1;
             int c = 0; //当前行第几个
             int p = 0; //当前页第几个
             for(int j = i * 24; j< (i+1)*24; j++){
-                if(j+1 > _emoji_list.count) break;
+                if(j+1 > emojicount) break;
                 if(p % 6 == 0) line ++ ;
                 if(c >= 6) c = 0;
-                NSString *img = [[NSString alloc]initWithFormat:@"%@%@",osspath,_emoji_list[j]];
+                NSString *img = [[NSString alloc]initWithFormat:@"%@%d.png",emojibase,j+1];
                 UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(_kInputBarPadding + (w + _kInputBarPadding) * c  +  i * screenWidth , _kInputBarPadding + line * (w + _kInputBarPadding)  , w, w)];
                 [imageView setTag: j];
                 [imageView setUserInteractionEnabled:YES];
