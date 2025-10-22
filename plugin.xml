@@ -25,7 +25,7 @@
             <config>
                 <source url="https://github.com/CocoaPods/Specs.git"/>
             </config>
-            <pods use-frameworks="true">
+            <pods>
                 <pod name="Mp3Recorder" options=":git => 'https://github.com/boboxiaodd/Mp3Recorder.git'" />
                 <pod name="SDWebImage" />
             </pods>
