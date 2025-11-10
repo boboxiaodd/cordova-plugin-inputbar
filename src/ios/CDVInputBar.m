@@ -716,11 +716,12 @@
         _inputTextField.returnKeyType = UIReturnKeyDone;
     }
 
-    UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding * 2, _kInputBarPadding)];
+    UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding*2, _kInputBarPadding)];
     _inputTextField.leftView = paddingView;
     _inputTextField.rightView = paddingView;
     _inputTextField.leftViewMode = UITextFieldViewModeAlways;
     _inputTextField.rightViewMode = UITextFieldViewModeAlways;
+    
 
     UIView *borderView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, screen.width, 1.0)];
     borderView.backgroundColor = [UIColor colorWithHex:0xEEEEEEFF];
@@ -788,7 +789,7 @@
     if (_inputBar){
         CGRect r = [_inputBar frame];
         r.origin.y = [UIScreen mainScreen].bounds.size.height - _inputBarRealHeight - height + safeBottom;
-        r.size.height = _inputBarRealHeight - safeBottom;
+        r.size.height = _inputBarRealHeight - safeBottom + 100.0f;  //BOBOFIXED iOS 26
         [_inputBar setFrame:r];
     }
     if (_chatBar){
