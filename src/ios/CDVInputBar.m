@@ -716,7 +716,7 @@
         _inputTextField.returnKeyType = UIReturnKeyDone;
     }
 
-    UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding, _kInputBarPadding)];
+    UIView *paddingView = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, _kInputBarPadding * 2, _kInputBarPadding)];
     _inputTextField.leftView = paddingView;
     _inputTextField.rightView = paddingView;
     _inputTextField.leftViewMode = UITextFieldViewModeAlways;
